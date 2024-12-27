@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# SARBS 2024.12.25
+# SARBS 2024.12.26
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # von Luke Smith <luke@lukesmith.xyz>
 # übersetzt von Sergius <sergius@posteo.de>
