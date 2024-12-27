@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# SARBS 2024.12.25
+# SARBS 2024.12.15
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # von Luke Smith <luke@lukesmith.xyz>
 # übersetzt von Sergius <sergius@posteo.de>
@@ -67,14 +67,14 @@ usercheck() {
     ! { id -u "$name" >/dev/null 2>&1; } ||
         whiptail --title "WARNUNG" --yes-button "FORTFAHREN" \
             --no-button "Nein, warte..." \
-            --yesno "Der Benutzer \`$name\` existiert bereits auf diesem System. SARBS kann für einen bereits existierenden Benutzer installieren, aber es wird alle konfliktierenden Einstellungen/Dotfiles des Benutzerkontos ÜBERSCHREIBEN.\\n\\nSARBS wird deine Benutzerdaten, Dokumente, Videos usw. NICHT überschreiben, also mach dir darum keine Sorgen, aber klicke nur auf <FORTFAHREN>, wenn du damit einverstanden bist, dass deine Einstellungen überschrieben werden.\\n\\nBeachte auch, dass SARBS das Passwort von $name auf das von dir eingegebene ändern wird." 14 80
+            --yesno "Der Benutzer \`$name\` existiert bereits auf diesem System. SARBS kann für einen bereits existierenden Benutzer installieren, aber es wird alle konfliktierenden Einstellungen/Dotfiles des Benutzerkontos ÜBERSCHREIBEN.\\n\\nSARBS wird deine Benutzerdaten, Dokumente, Videos usw. NICHT überschreiben, also mach dir darum keine Sorgen, aber klicke nur auf <FORTFAHREN>, wenn du damit einverstanden bist, dass deine Einstellungen überschrieben werden.\\n\\nBeachte auch, dass SARBS das Passwort von $name auf das von dir eingegebene ändern wird." 14 70
 }
 
 # Zeigt eine letzte Bestätigungsmeldung vor der automatischen Installation an.
 preinstallmsg() {
     whiptail --title "Lass uns anfangen!" --yes-button "Los geht's!" \
         --no-button "Nein, doch nicht!" \
-        --yesno "Der Rest der Installation wird jetzt völlig automatisiert ablaufen, sodass du dich zurücklehnen und entspannen kannst.\\n\\nEs wird einige Zeit dauern, aber wenn es fertig ist, kannst du dich noch mehr entspannen mit deinem kompletten System.\\n\\nDrücke jetzt einfach <Los geht's!> und die Installation wird beginnen!" 13 80 || {
+        --yesno "Der Rest der Installation wird jetzt völlig automatisiert ablaufen, sodass du dich zurücklehnen und entspannen kannst.\\n\\nEs wird einige Zeit dauern, aber wenn es fertig ist, kannst du dich noch mehr entspannen mit deinem kompletten System.\\n\\nDrücke jetzt einfach <Los geht's!> und die Installation wird beginnen!" 13 60 || {
         clear
         exit 1
     }
@@ -83,7 +83,7 @@ preinstallmsg() {
 # === Fügt den neuen Benutzer hinzu, setzt das Passwort und erstellt notwendige Verzeichnisse ===
 # Gruppe backup_users
 adduserandpass() {
-    whiptail --infobox "Benutzer \"$name\" wird hinzugefügt..." 7 80
+    whiptail --infobox "Benutzer \"$name\" wird hinzugefügt..." 7 50
     useradd -m -g wheel -s /bin/zsh "$name" >/dev/null 2>&1 ||
         { usermod -a -G wheel "$name"; mkdir -p /home/"$name"; chown "$name":wheel /home/"$name"; }
     export repodir="/home/$name/.local/src"
@@ -155,7 +155,6 @@ maininstall() {
 }
 
 # Klont ein Git-Repository und installiert es mit make.
-# TODO --force main Option testen
 gitmakeinstall() {
     progname="${1##*/}"
     progname="${progname%.git}"
@@ -166,7 +165,7 @@ gitmakeinstall() {
         --no-tags -q "$1" "$dir" ||
         {
             cd "$dir" || return 1
-            sudo -u "$name" git pull --force main origin master
+            sudo -u "$name" git pull --force origin master
         }
     cd "$dir" || exit 1
     make >/dev/null 2>&1
@@ -177,7 +176,7 @@ gitmakeinstall() {
 # Installiert Pakete aus dem AUR mit dem AUR-Helper.
 aurinstall() {
     whiptail --title "SARBS Installation" \
-        --infobox "\`$1\` wird aus dem AUR installiert ($n von $total). $1 $2" 9 80
+        --infobox "\`$1\` wird aus dem AUR installiert ($n von $total). $1 $2" 9 70
     echo "$aurinstalled" | grep -q "^$1$" && return 1
     sudo -u "$name" $aurhelper -S --noconfirm "$1" >/dev/null 2>&1
 }
@@ -185,7 +184,7 @@ aurinstall() {
 # Installiert Python-Pakete mit pip.
 pipinstall() {
     whiptail --title "SARBS Installation" \
-        --infobox "Das Python-Paket \`$1\` wird installiert ($n von $total). $1 $2" 9 80
+        --infobox "Das Python-Paket \`$1\` wird installiert ($n von $total). $1 $2" 9 70
     [ -x "$(command -v "pip")" ] || installpkg python-pip >/dev/null 2>&1
     yes | pip install "$1"
 }
@@ -211,7 +210,7 @@ installationloop() {
 
 # Klont ein Git-Repository und kopiert die Dateien in ein Zielverzeichnis.
 putgitrepo() {
-    whiptail --infobox "Konfigurationsdateien werden heruntergeladen und installiert..." 7 80
+    whiptail --infobox "Konfigurationsdateien werden heruntergeladen und installiert..." 7 60
     [ -z "$3" ] && branch="master" || branch="$repobranch"
     dir=$(mktemp -d)
     [ ! -d "$2" ] && mkdir -p "$2"
@@ -224,7 +223,7 @@ putgitrepo() {
 
 # Installiert vim-plug und die Plugins aus der Neovim-Konfiguration.
 vimplugininstall() {
-    whiptail --infobox "Neovim-Plugins werden installiert..." 7 80
+    whiptail --infobox "Neovim-Plugins werden installiert..." 7 60
     mkdir -p "/home/$name/.config/nvim/autoload"
     curl -Ls "https://raw.githubusercontent.com/Sergi-US/vim-plug/master/plug.vim" > "/home/$name/.config/nvim/autoload/plug.vim"
     chown -R "$name:wheel" "/home/$name/.config/nvim"
@@ -368,7 +367,6 @@ sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
     systemctl --user enable --now wireplumber.service
 
 # PulseAudio-Dienste und Sockets maskieren
-# TODO überarbeiten da gewechselt auch pipewire?
 sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
     systemctl --user mask pulseaudio.service pulseaudio.socket
 
