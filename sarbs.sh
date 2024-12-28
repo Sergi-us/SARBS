@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# SARBS 2024.12.26
+# SARBS 2024.12.27
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # von Luke Smith <luke@lukesmith.xyz>
 # übersetzt von Sergius <sergius@posteo.de>
@@ -135,13 +135,13 @@ Include = /etc/pacman.d/mirrorlist-arch" >>/etc/pacman.conf
 # TODO --force main Option testen
 manualinstall() {
     pacman -Qq "$1" && return 0
-    whiptail --infobox "\"$1\" wird manuell installiert." 7 50
+    whiptail --infobox "\"$1\" wird manuell installiert." 7 80
     sudo -u "$name" mkdir -p "$repodir/$1"
     sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
         --no-tags -q "https://aur.archlinux.org/$1.git" "$repodir/$1" ||
         {
             cd "$repodir/$1" || return 1
-            sudo -u "$name" git pull --force main origin master
+            sudo -u "$name" git pull --force origin master
         }
     cd "$repodir/$1" || exit 1
     sudo -u "$name" -D "$repodir/$1" \
@@ -161,12 +161,13 @@ gitmakeinstall() {
     progname="${progname%.git}"
     dir="$repodir/$progname"
     whiptail --title "SARBS Installation" \
-        --infobox "\`$progname\` wird installiert ($n von $total) via \`git\` und \`make\`. $(basename "$1") $2" 8 70
+        --infobox "\`$progname\` wird installiert ($n von $total) via \`git\` und \`make\`. $(basename "$1") $2" 8 80
     sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
         --no-tags -q "$1" "$dir" ||
         {
             cd "$dir" || return 1
-            sudo -u "$name" git pull --force main origin master
+            current_branch=$(git rev-parse --abbrev-ref HEAD)
+            sudo -u "$name" git pull --force origin "$current_branch"
         }
     cd "$dir" || exit 1
     make >/dev/null 2>&1
@@ -292,11 +293,18 @@ finalize() {
 
 ### DAS EIGENTLICHE SKRIPT ###
 
-# Überprüft, ob der Benutzer root ist und ob das System Arch-basiert ist, installiert whiptail.
+# 1. Logdatei mit Zeitstempel im Root-Home-Verzeichnis erstellen
+logfile="$HOME/install_$(date '+%Y-%m-%d_%H-%M-%S').log"
+touch "$logfile"
+
+# 2. Globale Umleitung aller Ausgaben (stdout und stderr) in die Logdatei
+exec > >(stdbuf -oL tee -a "$logfile") 2>&1
+
+# 3. Überprüft, ob der Benutzer root ist und ob das System Arch-basiert ist, installiert whiptail.
 pacman --noconfirm --needed -Sy libnewt ||
     error "Bist du sicher, dass du als root-Benutzer angemeldet bist, ein Arch-basiertes System verwendest und eine Internetverbindung hast?"
 
-# Begrüßung und Auswahl der Dotfiles.
+# 4. Begrüßung und Auswahl der Dotfiles.
 welcomemsg || error "Benutzer hat abgebrochen."
 
 # Benutzername und Passwort abfragen.
