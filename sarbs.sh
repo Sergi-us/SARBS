@@ -8,19 +8,13 @@
 ### OPTIONEN UND VARIABLEN ###
 
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
-progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/master/progs.csv"
+progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
 aurhelper="yay"
 # TODO Branch anpassen oder ergänzen
-repobranch="master"
+repobranch="main"
 export TERM=ansi
 
 rssurls="https://lukesmith.xyz/rss.xml
-https://videos.lukesmith.xyz/feeds/videos.xml?videoChannelId=2 \"~Luke Smith (Videos)\"
-https://www.youtube.com/feeds/videos.xml?channel_id=UC2eYFnH61tmytImy1mTYvhA \"~Luke Smith (YouTube)\"
-https://notrelated.xyz/rss
-https://based.cooking/index.xml
-https://artixlinux.org/feed.php \"tech\"
-https://www.archlinux.org/feeds/news/ \"tech\"
 https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
 
 ### FUNKTIONEN ###
