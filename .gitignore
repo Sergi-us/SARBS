@@ -1,0 +1,8 @@
+# Ignoriere alle .bac-Dateien
+*.bac
+
+# Ignoriere das Verzeichnis "temp"
+temp/
+
+# Ignoriere eine spezifische Datei
+secrets.txt
