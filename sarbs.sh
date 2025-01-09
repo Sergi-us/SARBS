@@ -2,7 +2,7 @@
 ## 2025-01-09 SARBS
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
-# im Original von Luke Smith <luke@lukesmith.xyz> "evige Probs an dich brä"
+# im Original von Luke Smith <luke@lukesmith.xyz> "ewige Props an dich bra"
 # Lizenz: MIT
 
 ### OPTIONEN UND VARIABLEN ###

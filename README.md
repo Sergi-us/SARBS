@@ -2,6 +2,8 @@
 
 SARBS ist ein effizientes Shell-Skript, das ein voll funktionsfähiges, auf einem Auto-tilling Fenstermanager basierendes System auf Arch-Linux (oder Derivaten) installiert, ohne die Routine manueller (Nach)installationsprozesse und Konfigurationen.
 
+TODO Vim bezug ergänzen... Die Efficiens der nutzung über die Tastatur ansprechen und die Deutsche tastatur abfucken
+
 Das Installation-Skript zieht zusätzliche Repositories:
 - [dwm](https://github.com/Sergi-us/dwm) (window manager)
 - [dmenu](https://github.com/Sergi-us/dmenu)
@@ -10,6 +12,10 @@ Das Installation-Skript zieht zusätzliche Repositories:
 - [surf](https://github.com/Sergi-us/surf)
 
 Es werden Programme aus der [progs.csv](https://github.com/Sergi-us/SARBS/blob/main/progs.csv) installiert. Die Konfiguration ist in den [dotfiles](https://github.com/Sergi-us/dotfiles) ...
+
+## Philosophie und Grundprinzipien
+
+https://suckless.org/philosophy/
 
 ## Nutzung
 
