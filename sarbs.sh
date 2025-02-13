@@ -6,7 +6,6 @@
 # Lizenz: MIT
 
 ### OPTIONEN UND VARIABLEN ###
-
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
 progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
 aurhelper="yay"
@@ -14,8 +13,8 @@ aurhelper="yay"
 repobranch="main"
 export TERM=ansi
 
-rssurls="https://lukesmith.xyz/rss.xml
-https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
+# TODO rssurls sollen über die dotfiles geladen werden und aus der Installationsroutine entfernt werden...
+rssurls="https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
 
 ### FUNKTIONEN ###
 
