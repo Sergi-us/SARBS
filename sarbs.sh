@@ -1,9 +1,10 @@
 #!/bin/sh
-## 2025-01-09 SARBS
+## 2025-02-20 SARBS
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz> "ewige Props an dich bra"
 # Lizenz: MIT
+# TODO BlackArch Quellen hinzufügen
 
 ### OPTIONEN UND VARIABLEN ###
 
