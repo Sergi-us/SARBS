@@ -1,5 +1,6 @@
 #!/bin/sh
-## 2025-02-13 SARBS
+## 2025-03-30 SARBS
+# Lazy.nvim ersetzt vim-plug
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz> "ewige Props an dich bra"
@@ -215,6 +216,14 @@ putgitrepo() {
     sudo -u "$name" cp -rfT "$dir" "$2"
 }
 
+# Instaliert lazy.nvim
+lazyinstall() {
+    whiptail --infobox "Lazy.nvim wird installiert..." 7 80
+    mkdir -p "/home/$name/.config/nvim/lua"
+    chown -R "$name:wheel" "/home/$name/.config/nvim"
+    sudo -u "$name" nvim --headless -c "lua require('lazy').sync()" -c "qa"
+}
+
 # Installiert vim-plug und die Plugins aus der Neovim-Konfiguration.
 vimplugininstall() {
     whiptail --infobox "Neovim-Plugins werden installiert..." 7 80
@@ -379,7 +388,11 @@ putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
 rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml"
 
 # Installiert Neovim-Plugins, falls sie noch nicht installiert sind.
-[ ! -f "/home/$name/.config/nvim/autoload/plug.vim" ] && vimplugininstall
+# wurde durch Lazy.nvim ersetzt
+# [ ! -f "/home/$name/.config/nvim/autoload/plug.vim" ] && vimplugininstall
+
+# Instaliert Lazy.nvim
+[ ! -d "/home/$name/.local/share/nvim/lazy" ] && lazyinstall
 
 # Deaktiviert den Systemlautsprecher (Piepton).
 rmmod pcspkr
