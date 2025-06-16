@@ -1,4 +1,4 @@
-#,SARBS-Tools,"2025-03-29 07:04:32"
+#,SARBS-Tools,"2025-05-09 10:49:18"
 ,xorg-server,"Grafischer Server"
 ,xorg-xinit,"startet den xorg-Server"
 ,xorg-xset,"Dienstprogramm zum Anpassen des X-Servers."

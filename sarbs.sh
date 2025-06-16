@@ -1,4 +1,5 @@
 #!/bin/sh
+## 2025-03-31 SARBS - DEV version
 ## 2025-03-30 SARBS
 # Lazy.nvim ersetzt vim-plug
 
@@ -8,14 +9,15 @@
 
 ### OPTIONEN UND VARIABLEN ###
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
-progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
+# progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
+progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/DEV/progs.csv"
 aurhelper="yay"
-# TODO Branch anpassen oder ergänzen
-repobranch="main"
+branch_option=""       # Für DEV-Branch oder leer lassen
+fallback_option="-b main"    # Der Fallback-Branch
 export TERM=ansi
 
 # TODO rssurls sollen über die dotfiles geladen werden und aus der Installationsroutine entfernt werden...
-rssurls="https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
+# rssurls="https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
 
 ### FUNKTIONEN ###
 
@@ -148,7 +150,6 @@ maininstall() {
 }
 
 # Klont ein Git-Repository und installiert es mit make.
-# TODO --force main Option testen
 gitmakeinstall() {
     progname="${1##*/}"
     progname="${progname%.git}"
@@ -156,12 +157,16 @@ gitmakeinstall() {
     whiptail --title "SARBS Installation" \
         --infobox "\`$progname\` wird installiert ($n von $total) via \`git\` und \`make\`. $(basename "$1") $2" 8 80
     sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q "$1" "$dir" ||
-        {
-            cd "$dir" || return 1
-            current_branch=$(git rev-parse --abbrev-ref HEAD)
-            sudo -u "$name" git pull --force origin "$current_branch"
-        }
+        --no-tags -q $branch_option "$1" "$dir" || \
+    sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
+        --no-tags -q $fallback_option "$1" "$dir" || \
+    sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
+        --no-tags -q "$1" "$dir" || \
+    {
+        cd "$dir" || return 1
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        sudo -u "$name" git pull --force origin "$current_branch"
+    }
     cd "$dir" || exit 1
     make >/dev/null 2>&1
     make install >/dev/null 2>&1
@@ -174,6 +179,7 @@ aurinstall() {
         --infobox "\`$1\` wird aus dem AUR installiert ($n von $total). $1 $2" 9 80
     echo "$aurinstalled" | grep -q "^$1$" && return 1
     sudo -u "$name" $aurhelper -S --noconfirm "$1" >/dev/null 2>&1
+    clear || tput reset
 }
 
 # Installiert Python-Pakete mit pip.
@@ -182,6 +188,7 @@ pipinstall() {
         --infobox "Das Python-Paket \`$1\` wird installiert ($n von $total). $1 $2" 9 80
     [ -x "$(command -v "pip")" ] || installpkg python-pip >/dev/null 2>&1
     yes | pip install "$1"
+    clear || tput reset
 }
 
 # Installationsschleife, die alle Programme aus der progs.csv installiert.
@@ -206,14 +213,27 @@ installationloop() {
 # Klont ein Git-Repository und kopiert die Dateien in ein Zielverzeichnis.
 putgitrepo() {
     whiptail --infobox "Konfigurationsdateien werden heruntergeladen und installiert..." 7 80
-    [ -z "$3" ] && branch="master" || branch="$repobranch"
     dir=$(mktemp -d)
     [ ! -d "$2" ] && mkdir -p "$2"
     chown "$name":wheel "$dir" "$2"
     sudo -u "$name" git -C "$repodir" clone --depth 1 \
-        --single-branch --no-tags -q --recursive -b "$branch" \
+        --single-branch --no-tags -q --recursive $branch_option \
+        --recurse-submodules "$1" "$dir" || \
+    sudo -u "$name" git -C "$repodir" clone --depth 1 \
+        --single-branch --no-tags -q --recursive $fallback_option \
+        --recurse-submodules "$1" "$dir" || \
+    sudo -u "$name" git -C "$repodir" clone --depth 1 \
+        --single-branch --no-tags -q --recursive \
         --recurse-submodules "$1" "$dir"
     sudo -u "$name" cp -rfT "$dir" "$2"
+
+    # Erstelle benutzerspezifische symbolische Links
+    whiptail --infobox "Benutzerspezifische symbolische Links werden erstellt..." 7 60
+    # Dunst-Link für pywal (überschreibt alte Links/Dateien)
+    sudo -u "$name" mkdir -p "/home/$name/.config/dunst"
+    sudo -u "$name" rm -f "/home/$name/.config/dunst/dunstrc"  # Alte Datei/Link entfernen
+    sudo -u "$name" ln -sf "/home/$name/.cache/wal/dunstrc" "/home/$name/.config/dunst/dunstrc"
+
 }
 
 # Instaliert lazy.nvim
@@ -386,6 +406,12 @@ putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
 [ -z "/home/$name/.config/newsboat/urls" ] &&
     echo "$rssurls" > "/home/$name/.config/newsboat/urls"
 rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml"
+
+# Dunst systemd-Service maskieren (wird über xinitrc gestartet)
+## 2025-06-16 TODO Testen. dunst soll erst nach x11 starten.
+whiptail --infobox "Dunst-Service wird deaktiviert (läuft über xinitrc)..." 7 60
+sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
+    systemctl --user mask dunst.service >/dev/null 2>&1
 
 # Installiert Neovim-Plugins, falls sie noch nicht installiert sind.
 # wurde durch Lazy.nvim ersetzt
