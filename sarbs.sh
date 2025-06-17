@@ -13,8 +13,7 @@
 
 ### OPTIONEN UND VARIABLEN ###
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
-# progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
-progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/DEV/progs.csv"
+progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
 aurhelper="yay"
 branch_option=""       # Für DEV-Branch oder leer lassen
 fallback_option="-b main"    # Der Fallback-Branch
