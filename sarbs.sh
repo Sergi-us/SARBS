@@ -139,7 +139,8 @@ manualinstall() {
         --no-tags -q "https://aur.archlinux.org/$1.git" "$repodir/$1" ||
         {
             cd "$repodir/$1" || return 1
-            sudo -u "$name" git pull --force origin master
+            # sudo -u "$name" git pull --force origin master
+            sudo -u "$name" git pull --force
         }
     cd "$repodir/$1" || exit 1
     sudo -u "$name" -D "$repodir/$1" \
@@ -159,20 +160,31 @@ gitmakeinstall() {
     dir="$repodir/$progname"
     whiptail --title "SARBS Installation" \
         --infobox "\`$progname\` wird installiert ($n von $total) via \`git\` und \`make\`. $(basename "$1") $2" 8 80
-    sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q $branch_option "$1" "$dir" || \
-    sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q $fallback_option "$1" "$dir" || \
-    sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q "$1" "$dir" || \
-    {
+
+    # Stelle sicher, dass das repodir dem User gehört
+    [ ! -d "$repodir" ] && sudo -u "$name" mkdir -p "$repodir"
+
+    # Git-Operationen als User
+    if ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
+        --no-tags -q $branch_option "$1" "$dir" && \
+       ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
+        --no-tags -q $fallback_option "$1" "$dir" && \
+       ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
+        --no-tags -q "$1" "$dir"; then
+        # Clone fehlgeschlagen, versuche pull
         cd "$dir" || return 1
-        current_branch=$(git rev-parse --abbrev-ref HEAD)
-        sudo -u "$name" git pull --force origin "$current_branch"
-    }
+        sudo -u "$name" git pull --force
+    fi
+
     cd "$dir" || exit 1
-    make >/dev/null 2>&1
+
+    # Make als User ausführen, nur install als root
+    sudo -u "$name" make >/dev/null 2>&1
     make install >/dev/null 2>&1
+
+    # Aufräumen: Stelle sicher, dass alles dem User gehört
+    chown -R "$name:$name" "$dir"
+
     cd /tmp || return 1
 }
 
