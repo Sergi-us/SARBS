@@ -1,5 +1,5 @@
 #!/bin/sh
-## 2025-03-30 SARBS
+## 2025-06-22 SARBS
 # Lazy.nvim ersetzt vim-plug
 # dunst deaktiviert
 # TODO newsboat durch newsraft ersetzen
@@ -15,14 +15,54 @@
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
 progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
 aurhelper="yay"
-branch_option=""       # Für DEV-Branch oder leer lassen
-fallback_option="-b main"    # Der Fallback-Branch
+branch_option=""                # Für DEV-Branch oder leer lassen
+fallback_option="-b main"       # Der Fallback-Branch
 export TERM=ansi
+enable_firewall="true"          # Firewall-Setup aktivieren (true/false)
 
 # TODO rssurls sollen über die dotfiles geladen werden und aus der Installationsroutine entfernt werden...
 # rssurls="https://github.com/Sergi-US/voidrice/commits/master.atom \"~SARBS dotfiles\""
 
 ### FUNKTIONEN ###
+
+# Diese Funktion füge bei den anderen Funktionen ein:
+setupfirewall() {
+    whiptail --infobox "UFW Firewall wird eingerichtet..." 7 50
+
+    # Backend auf nftables setzen (besser für Wireguard)
+    # Prüfe ob die Backend-Zeile existiert
+    if grep -q "^#*IPT_BACKEND=" /etc/default/ufw; then
+        # Zeile existiert (auskommentiert oder nicht), ersetze sie
+        sed -i 's/^#*IPT_BACKEND=.*/IPT_BACKEND="nftables"/' /etc/default/ufw
+    else
+        # Zeile existiert nicht, füge sie hinzu
+        echo 'IPT_BACKEND="nftables"' >> /etc/default/ufw
+    fi
+
+    # UFW zurücksetzen um sicherzustellen dass keine alten Regeln existieren
+    echo "y" | ufw --force reset >/dev/null 2>&1
+
+    # Standardregeln setzen
+    ufw default deny incoming >/dev/null 2>&1
+    ufw default allow outgoing >/dev/null 2>&1
+
+    # UFW aktivieren (--force um die Bestätigungsfrage zu überspringen)
+    echo "y" | ufw --force enable >/dev/null 2>&1
+
+    # UFW-Dienst beim Systemstart aktivieren
+    case "$(readlink -f /sbin/init)" in
+        *systemd*)
+            systemctl enable ufw >/dev/null 2>&1
+            ;;
+        *)
+            # Für Artix/OpenRC
+            rc-update add ufw default >/dev/null 2>&1
+            ;;
+    esac
+
+    whiptail --infobox "Firewall wurde erfolgreich konfiguriert!" 7 50
+    sleep 2
+}
 
 # Installiert ein Paket mit pacman ohne Bestätigung und prüft, ob es bereits installiert ist.
 installpkg() {
@@ -65,7 +105,7 @@ usercheck() {
     ! { id -u "$name" >/dev/null 2>&1; } ||
         whiptail --title "WARNUNG" --yes-button "FORTFAHREN" \
             --no-button "Nein, warte..." \
-            --yesno "Der Benutzer \`$name\` existiert bereits auf diesem System. SARBS kann für einen bereits existierenden Benutzer installieren, aber es wird alle konfliktierenden Einstellungen/Dotfiles des Benutzerkontos ÜBERSCHREIBEN.\\n\\nSARBS wird deine Benutzerdaten, Dokumente, Videos usw. NICHT überschreiben, also mach dir darum keine Sorgen, aber klicke nur auf <FORTFAHREN>, wenn du damit einverstanden bist, dass deine Einstellungen überschrieben werden.\\n\\nBeachte auch, dass SARBS das Passwort von $name auf das von dir eingegebene ändern wird." 14 80
+            --yesno "Der Benutzer \`$name\` existiert bereits auf diesem System. SARBS kann für einen bereits existierenden Benutzer installieren werden, aber es wirden alle Einstellungen/Dotfiles des Benutzerkontos ÜBERSCHREIBEN.\\n\\nSARBS wird deine Benutzerdaten, Dokumente, Videos usw. NICHT überschreiben und auch NICHT Löschen, also mach dir darum keine Sorgen. Klicke nur auf <FORTFAHREN>, wenn du damit einverstanden bist, dass deine Einstellungen überschrieben werden.\\n\\nBeachte auch, dass SARBS das Passwort von $name auf das von dir eingegebene ändern wird." 14 80
 }
 
 # Zeigt eine letzte Bestätigungsmeldung vor der automatischen Installation an.
@@ -89,24 +129,22 @@ adduserandpass() {
     chown -R "$name":wheel "$(dirname "$repodir")"
     echo "$name:$pass1" | chpasswd
     unset pass1 pass2
-
-    # Neue Backup-Konfiguration
-    # Gruppe erstellen, falls sie nicht existiert
-    if ! getent group backup_users >/dev/null; then
-        whiptail --infobox "Backup-Gruppe wird erstellt..." 7 50
-        groupadd backup_users
-    fi
-
-    # USB-Mount-Verzeichnis erstellen und konfigurieren, falls es nicht existiert
-    if [ ! -d "/mnt/usb" ]; then
-        whiptail --infobox "USB-Mount-Verzeichnis wird eingerichtet..." 7 50
-        mkdir -p "/mnt/usb"
-        chown root:backup_users "/mnt/usb"
-        chmod 2775 "/mnt/usb"
-    fi
-
-    # Nutzer zur Backup-Gruppe hinzufügen
-    usermod -aG backup_users "$name"
+##    # Neue Backup-Konfiguration
+##    # Gruppe erstellen, falls sie nicht existiert
+##    if ! getent group backup_users >/dev/null; then
+##        whiptail --infobox "Backup-Gruppe wird erstellt..." 7 50
+##        groupadd backup_users
+##    fi
+##    # USB-Mount-Verzeichnis erstellen und konfigurieren, falls es nicht existiert
+##    if [ ! -d "/mnt/usb" ]; then
+##        whiptail --infobox "USB-Mount-Verzeichnis wird eingerichtet..." 7 50
+##        mkdir -p "/mnt/usb"
+##        chown root:backup_users "/mnt/usb"
+##        chmod 2775 "/mnt/usb"
+##    fi
+##
+##    # Nutzer zur Backup-Gruppe hinzufügen
+##    usermod -aG backup_users "$name"
 }
 
 # Aktualisiert den Arch-Schlüsselring oder aktiviert Arch-Repositories auf Artix-Systemen.
@@ -177,14 +215,11 @@ gitmakeinstall() {
     fi
 
     cd "$dir" || exit 1
-
     # Make als User ausführen, nur install als root
     sudo -u "$name" make >/dev/null 2>&1
     make install >/dev/null 2>&1
-
     # Aufräumen: Stelle sicher, dass alles dem User gehört
-    chown -R "$name:$name" "$dir"
-
+    chown -R "$name:wheel" "$dir"
     cd /tmp || return 1
 }
 
@@ -225,6 +260,9 @@ installationloop() {
     done </tmp/progs.csv
 }
 
+# Firewall einrichten wenn aktiviert
+[ "$enable_firewall" = "true" ] && setupfirewall
+
 # Klont ein Git-Repository und kopiert die Dateien in ein Zielverzeichnis.
 putgitrepo() {
     whiptail --infobox "Konfigurationsdateien werden heruntergeladen und installiert..." 7 80
@@ -248,7 +286,6 @@ putgitrepo() {
     sudo -u "$name" mkdir -p "/home/$name/.config/dunst"
     sudo -u "$name" rm -f "/home/$name/.config/dunst/dunstrc"  # Alte Datei/Link entfernen
     sudo -u "$name" ln -sf "/home/$name/.cache/wal/dunstrc" "/home/$name/.config/dunst/dunstrc"
-
 }
 
 # Instaliert lazy.nvim
@@ -260,66 +297,79 @@ lazyinstall() {
 }
 
 # Installiert vim-plug und die Plugins aus der Neovim-Konfiguration.
-vimplugininstall() {
-    whiptail --infobox "Neovim-Plugins werden installiert..." 7 80
-    mkdir -p "/home/$name/.config/nvim/autoload"
-    curl -Ls "https://raw.githubusercontent.com/Sergi-US/vim-plug/master/plug.vim" > "/home/$name/.config/nvim/autoload/plug.vim"
-    chown -R "$name:wheel" "/home/$name/.config/nvim"
-    sudo -u "$name" nvim -c "PlugInstall|q|q"
-}
+##vimplugininstall() {
+##    whiptail --infobox "Neovim-Plugins werden installiert..." 7 80
+##    mkdir -p "/home/$name/.config/nvim/autoload"
+##    curl -Ls "https://raw.githubusercontent.com/Sergi-US/vim-plug/master/plug.vim" > "/home/$name/.config/nvim/autoload/plug.vim"
+##    chown -R "$name:wheel" "/home/$name/.config/nvim"
+##    sudo -u "$name" nvim -c "PlugInstall|q|q"
+##}
 
 # Erstellt die user.js für Firefox/Librewolf basierend auf Arkenfox ===
-makeuserjs(){
-    arkenfox="$pdir/arkenfox.js"
-    overrides="$pdir/user-overrides.js"
-    userjs="$pdir/user.js"
-    ln -fs "/home/$name/.config/firefox/larbs.js" "$overrides"
-    [ ! -f "$arkenfox" ] && curl -sL "https://raw.githubusercontent.com/Sergi-us/user.js/master/user.js" > "$arkenfox"
-    cat "$arkenfox" "$overrides" > "$userjs"
-    chown "$name:wheel" "$arkenfox" "$userjs"
-    # Installieren des Aktualisierungsskripts.
-    mkdir -p /usr/local/lib /etc/pacman.d/hooks
-    cp "/home/$name/.local/bin/arkenfox-auto-update" /usr/local/lib/
-    chown root:root /usr/local/lib/arkenfox-auto-update
-    chmod 755 /usr/local/lib/arkenfox-auto-update
-    # Konfiguration des pacman-Hooks zum automatischen Aktualisieren.
-    echo "[Trigger]
-Operation = Upgrade
-Type = Package
-Target = firefox
-Target = librewolf
-Target = librewolf-bin
-[Action]
-Description=Arkenfox user.js aktualisieren
-When=PostTransaction
-Depends=arkenfox-user.js
-Exec=/usr/local/lib/arkenfox-auto-update" > /etc/pacman.d/hooks/arkenfox.hook
-}
+##makeuserjs(){
+##    arkenfox="$pdir/arkenfox.js"
+##    overrides="$pdir/user-overrides.js"
+##    userjs="$pdir/user.js"
+##    ln -fs "/home/$name/.config/firefox/larbs.js" "$overrides"
+##    [ ! -f "$arkenfox" ] && curl -sL "https://raw.githubusercontent.com/Sergi-us/user.js/master/user.js" > "$arkenfox"
+##    cat "$arkenfox" "$overrides" > "$userjs"
+##    chown "$name:wheel" "$arkenfox" "$userjs"
+##    # Installieren des Aktualisierungsskripts.
+##    mkdir -p /usr/local/lib /etc/pacman.d/hooks
+##    cp "/home/$name/.local/bin/arkenfox-auto-update" /usr/local/lib/
+##    chown root:root /usr/local/lib/arkenfox-auto-update
+##    chmod 755 /usr/local/lib/arkenfox-auto-update
+##    # Konfiguration des pacman-Hooks zum automatischen Aktualisieren.
+##    echo "[Trigger]
+##Operation = Upgrade
+##Type = Package
+##Target = firefox
+##Target = librewolf
+##Target = librewolf-bin
+##[Action]
+##Description=Arkenfox user.js aktualisieren
+##When=PostTransaction
+##Depends=arkenfox-user.js
+##Exec=/usr/local/lib/arkenfox-auto-update" > /etc/pacman.d/hooks/arkenfox.hook
+##}
 
 # === Installiert Librewolf-Add-ons manuell durch Herunterladen der XPI-Dateien TESTVERSION ===
-installffaddons(){
-    # Liste der zu installierenden Add-ons
-    addonlist="ublock-origin decentraleyes istilldontcareaboutcookies vimmatic darkreader keepassxc-browser multi-account-containers styl-us chameleon-ext nighttab"
-    addontmp="$(mktemp -d)"
-    trap "rm -fr $addontmp" HUP INT QUIT TERM PWR EXIT
-    IFS=' '
-    sudo -u "$name" mkdir -p "$pdir/extensions/"
-    for addon in $addonlist; do
-        if [ "$addon" = "ublock-origin" ]; then
-            addonurl="$(curl -sL https://api.github.com/repos/gorhill/uBlock/releases/latest | grep -E 'browser_download_url.*\.firefox\.xpi' | cut -d '"' -f 4)"
-        else
-            addonurl="$(curl --silent "https://addons.mozilla.org/en-US/firefox/addon/${addon}/" | grep -o 'https://addons.mozilla.org/firefox/downloads/file/[^"]*')"
-        fi
-        file="${addonurl##*/}"
-        sudo -u "$name" curl -LOs "$addonurl" > "$addontmp/$file"
-        id="$(unzip -p "$file" manifest.json | grep "\"id\"")"
-        id="${id%\"*}"
-        id="${id##*\"}"
-        mv "$file" "$pdir/extensions/$id.xpi"
-    done
-    chown -R "$name:$name" "$pdir/extensions"
-#category-more-from-mozilla { display: none !important }" > "$pdir/chrome/userContent.css"
-}
+##installffaddons(){
+##    # Liste der zu installierenden Add-ons
+##    addonlist="ublock-origin decentraleyes istilldontcareaboutcookies vimmatic darkreader keepassxc-browser styl-us nighttab"
+##    addontmp="$(mktemp -d)"
+##    trap "rm -fr $addontmp" HUP INT QUIT TERM PWR EXIT
+##    IFS=' '
+##    sudo -u "$name" mkdir -p "$pdir/extensions/"
+##
+##    # WICHTIG: In das temporäre Verzeichnis wechseln
+##    cd "$addontmp" || return 1
+##
+##    for addon in $addonlist; do
+##        if [ "$addon" = "ublock-origin" ]; then
+##            addonurl="$(curl -sL https://api.github.com/repos/gorhill/uBlock/releases/latest | grep -E 'browser_download_url.*\.firefox\.xpi' | cut -d '"' -f 4)"
+##        else
+##            addonurl="$(curl --silent "https://addons.mozilla.org/en-US/firefox/addon/${addon}/" | grep -o 'https://addons.mozilla.org/firefox/downloads/file/[^"]*')"
+##        fi
+##        file="${addonurl##*/}"
+##
+##        # KORREKTUR: Entweder -O ohne Umleitung ODER -o mit Dateiname
+##        sudo -u "$name" curl -LOs "$addonurl"
+##
+##        # Prüfen ob die Datei existiert
+##        if [ -f "$file" ]; then
+##            id="$(unzip -p "$file" manifest.json | grep "\"id\"" | head -1)"
+##            id="${id%\"*}"
+##            id="${id##*\"}"
+##            mv "$file" "$pdir/extensions/$id.xpi"
+##        else
+##            echo "Warnung: Download von $addon fehlgeschlagen"
+##        fi
+##    done
+##
+##    chown -R "$name:wheel" "$pdir/extensions"
+##    cd - >/dev/null
+##}
 
 # Zeigt eine Abschlussmeldung an, wenn die Installation beendet ist.
 finalize() {
@@ -462,23 +512,23 @@ echo "export \$(dbus-launch)" >/etc/profile.d/dbus.sh
 EndSection' >/etc/X11/xorg.conf.d/40-libinput.conf
 
 # Konfiguriert den Browser mit Privacy-Einstellungen und installiert Add-ons.
-whiptail --infobox "Einstellungen für die Browser-Privatsphäre und Add-ons werden gesetzt..." 7 60
+##whiptail --infobox "Einstellungen für die Browser-Privatsphäre und Add-ons werden gesetzt..." 7 60
 
-browserdir="/home/$name/.librewolf"
-profilesini="$browserdir/profiles.ini"
+##browserdir="/home/$name/.librewolf"
+##profilesini="$browserdir/profiles.ini"
 
 # Startet Librewolf im Headless-Modus, um ein Profil zu erstellen.
-sudo -u "$name" librewolf --headless >/dev/null 2>&1 &
-sleep 1
-profile="$(sed -n "/Default=.*.default-default/ s/.*=//p" "$profilesini")"
-pdir="$browserdir/$profile"
+##sudo -u "$name" librewolf --headless >/dev/null 2>&1 &
+##sleep 1
+##profile="$(sed -n "/Default=.*.default-default/ s/.*=//p" "$profilesini")"
+##pdir="$browserdir/$profile"
 
 # Erstellt die user.js und installiert Add-ons, wenn das Profilverzeichnis existiert.
-[ -d "$pdir" ] && makeuserjs
-[ -d "$pdir" ] && installffaddons
+##[ -d "$pdir" ] && makeuserjs
+##[ -d "$pdir" ] && installffaddons
 
 # Beendet die Librewolf-Instanz.
-pkill -u "$name" librewolf
+##pkill -u "$name" librewolf
 
 # Konfiguriert sudo-Einstellungen für den Benutzer.
 echo "%wheel ALL=(ALL:ALL) ALL" >/etc/sudoers.d/00-larbs-wheel-can-sudo
