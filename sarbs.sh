@@ -29,6 +29,7 @@ enable_firewall="true"          # Firewall-Setup aktivieren (true/false)
 setupfirewall() {
     whiptail --infobox "UFW Firewall wird eingerichtet..." 7 50
 
+
     # Backend auf nftables setzen (besser für Wireguard)
     # Prüfe ob die Backend-Zeile existiert
     if grep -q "^#*IPT_BACKEND=" /etc/default/ufw; then
@@ -46,6 +47,12 @@ setupfirewall() {
     ufw default deny incoming >/dev/null 2>&1
     ufw default allow outgoing >/dev/null 2>&1
 
+    # HINWEIS: UFW-Regeln werden in /etc/ufw/ gespeichert:
+    # - /etc/ufw/user.rules (IPv4 Regeln)
+    # - /etc/ufw/user6.rules (IPv6 Regeln)
+    # - /etc/ufw/before.rules & before6.rules (System-Regeln)
+    # Backup dieser Dateien vor dem Skript-Lauf wird empfohlen!
+
     # UFW aktivieren (--force um die Bestätigungsfrage zu überspringen)
     echo "y" | ufw --force enable >/dev/null 2>&1
 
@@ -61,7 +68,7 @@ setupfirewall() {
     esac
 
     whiptail --infobox "Firewall wurde erfolgreich konfiguriert!" 7 50
-    sleep 2
+    sleep 3
 }
 
 # Installiert ein Paket mit pacman ohne Bestätigung und prüft, ob es bereits installiert ist.

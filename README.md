@@ -40,6 +40,6 @@ Wenn der Installationsprozess abgeschlossen ist, kannst du dein System neu start
 Mit `MOD`+`F1` kannst ein Hilfe-Dokument aufrufen. Viel Spaß
 
 ## Entwicklungsfortschritt
-- umstellung von ip-tabels zu nftables, notwendig für Wireguard (bzw. für den Einrichtungsassistenen)
+- UFW Konfiguration und Standard-Regeln hinzugefügt(deny incoming und allow outgoing). nftabels wird als Backend gesetzt.
 - es wird eine Logdatei im Home-Verzeichnis des root Nutzers abgelegt.
 - die Installationsroutine für Programme die aus Git Repositories installiert werden wurde auf unterschiedliche Branches angepasst. Es wird der aktuelle Branch vor dem klonen abgefragt. (Master und Main Thematik)
