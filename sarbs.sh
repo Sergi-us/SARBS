@@ -1,15 +1,15 @@
 #!/bin/sh
-## 2025-06-22 SARBS
+## 2025-08-22 SARBS
 # Lazy.nvim ersetzt vim-plug
 # dunst deaktiviert
-# TODO newsboat durch newsraft ersetzen
-# TODO librewolf aus dem Installer-Skript entfernen
 # TODO qutebrowser als librewolf alternative einbauen (wahrscheinlich über die progs.csv und dotfiles möglich)
 # TODO BlackArch Quellen hinzufügen
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz> "ewige Props an dich bra"
 # Lizenz: MIT
+
+# Sudoers Einstellungen ab Zeile 521 geändert.
 
 ### OPTIONEN UND VARIABLEN ###
 dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
@@ -440,13 +440,13 @@ export XDG_RUNTIME_DIR="/run/user/$(id -u "$name")"
 [ -f /etc/sudoers.pacnew ] && cp /etc/sudoers.pacnew /etc/sudoers
 
 # Erlaubt dem Benutzer, sudo ohne Passwort zu verwenden, notwendig für AUR-Installationen.
-trap 'rm -f /etc/sudoers.d/larbs-temp' HUP INT QUIT TERM PWR EXIT
+trap 'rm -f /etc/sudoers.d/sarbs-temp' HUP INT QUIT TERM PWR EXIT
 echo "%wheel ALL=(ALL) NOPASSWD: ALL
-Defaults:%wheel,root runcwd=*" >/etc/sudoers.d/larbs-temp
+Defaults:%wheel,root runcwd=*" >/etc/sudoers.d/sarbs-temp
 
 # Konfiguriert pacman mit zusätzlichen Optionen.
 grep -q "ILoveCandy" /etc/pacman.conf || sed -i "/#VerbosePkgLists/a ILoveCandy" /etc/pacman.conf
-sed -Ei "s/^#(ParallelDownloads).*/\1 = 5/;/^#Color$/s/#//" /etc/pacman.conf
+sed -Ei "s/^#(ParallelDownloads).*/\1 = 10/;/^#Color$/s/#//" /etc/pacman.conf
 
 # Setzt die Anzahl der Kompilierungskerne auf die Anzahl der verfügbaren CPUs.
 sed -i "s/-j2/-j$(nproc)/;/^#MAKEFLAGS/s/^#//" /etc/makepkg.conf
@@ -518,34 +518,47 @@ echo "export \$(dbus-launch)" >/etc/profile.d/dbus.sh
     Option "Tapping" "on"
 EndSection' >/etc/X11/xorg.conf.d/40-libinput.conf
 
-# Konfiguriert den Browser mit Privacy-Einstellungen und installiert Add-ons.
-##whiptail --infobox "Einstellungen für die Browser-Privatsphäre und Add-ons werden gesetzt..." 7 60
-
-##browserdir="/home/$name/.librewolf"
-##profilesini="$browserdir/profiles.ini"
-
-# Startet Librewolf im Headless-Modus, um ein Profil zu erstellen.
-##sudo -u "$name" librewolf --headless >/dev/null 2>&1 &
-##sleep 1
-##profile="$(sed -n "/Default=.*.default-default/ s/.*=//p" "$profilesini")"
-##pdir="$browserdir/$profile"
-
-# Erstellt die user.js und installiert Add-ons, wenn das Profilverzeichnis existiert.
-##[ -d "$pdir" ] && makeuserjs
-##[ -d "$pdir" ] && installffaddons
-
-# Beendet die Librewolf-Instanz.
-##pkill -u "$name" librewolf
-
-# Konfiguriert sudo-Einstellungen für den Benutzer.
-echo "%wheel ALL=(ALL:ALL) ALL" >/etc/sudoers.d/00-larbs-wheel-can-sudo
-echo "%wheel ALL=(ALL:ALL) NOPASSWD: /usr/bin/shutdown,/usr/bin/reboot,/usr/bin/systemctl suspend,/usr/bin/wifi-menu,/usr/bin/mount,/usr/bin/umount,/usr/bin/pacman -Syu,/usr/bin/pacman -Syyu,/usr/bin/pacman -Syyu --noconfirm,/usr/bin/loadkeys,/usr/bin/pacman -Syyuw --noconfirm,/usr/bin/pacman -S -y --config /etc/pacman.conf --,/usr/bin/pacman -S -y -u --config /etc/pacman.conf --" >/etc/sudoers.d/01-larbs-cmds-without-password
-echo "Defaults editor=/usr/bin/nvim" >/etc/sudoers.d/02-larbs-visudo-editor
+# Kernel-Einstellung: Erlaubt normalen Benutzern dmesg zu lesen (für System-Debugging)
 mkdir -p /etc/sysctl.d
 echo "kernel.dmesg_restrict = 0" > /etc/sysctl.d/dmesg.conf
 
+# Entfernt alte sudoers-Regeln von vorherigen Installationen für sauberes Setup
+rm -f /etc/sudoers.d/00-sarbs-wheel-can-sudo \
+      /etc/sudoers.d/01-sarbs-cmds-without-password \
+      /etc/sudoers.d/02-sarbs-visudo-editor \
+      /etc/sudoers.d/00-larbs-* \
+      /etc/sudoers.d/01-larbs-* \
+      /etc/sudoers.d/02-larbs-*
+
+# Konfiguriert sudo-Einstellungen für den Benutzer.
+echo "%wheel ALL=(ALL:ALL) ALL" >/etc/sudoers.d/00-sarbs-wheel-can-sudo
+
+# NOPASSWD-Befehle übersichtlich aufgelistet
+cat >/etc/sudoers.d/01-sarbs-cmds-without-password <<'EOF'
+%wheel ALL=(ALL:ALL) NOPASSWD: \
+    /usr/bin/shutdown, \
+    /usr/bin/reboot, \
+    /usr/bin/systemctl suspend, \
+    /usr/bin/systemctl hibernate, \
+    /usr/bin/systemctl poweroff, \
+    /usr/bin/wifi-menu, \
+    /usr/bin/mount, \
+    /usr/bin/umount, \
+    /usr/bin/pacman -Syu, \
+    /usr/bin/pacman -Syyu, \
+    /usr/bin/pacman -Syyu --noconfirm, \
+    /usr/bin/pacman -Syyuw --noconfirm, \
+    /usr/bin/cryptsetup open *, \
+    /usr/bin/cryptsetup close *, \
+    /usr/bin/loadkeys *, \
+    /usr/local/bin/tomb
+EOF
+
+# Setzt nvim als Standard-Editor für visudo (sicheres Editieren von sudoers)
+echo "Defaults editor=/usr/bin/nvim" >/etc/sudoers.d/02-sarbs-visudo-editor
+
 # Entfernt temporäre sudoers-Datei.
-rm -f /etc/sudoers.d/larbs-temp
+rm -f /etc/sudoers.d/sarbs-temp
 
 # Zeigt die Abschlussmeldung an.
 finalize
