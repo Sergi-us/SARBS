@@ -17,7 +17,7 @@ progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
 aurhelper="yay"
 branch_option=""                # Für DEV-Branch oder leer lassen
 fallback_option="-b main"       # Der Fallback-Branch
-# export TERM=ansi
+export TERM=ansi
 enable_firewall="true"          # Firewall-Setup aktivieren (true/false)
 
 # TODO rssurls sollen über die dotfiles geladen werden und aus der Installationsroutine entfernt werden...
@@ -194,45 +194,76 @@ manualinstall() {
 
 # Installiert Programme aus dem Hauptrepository mit Fortschrittsanzeige.
 maininstall() {
-    whiptail --title "SARBS Installation" --infobox "\`$1\` wird installiert ($n von $total). $1 $2" 9 70
+    whiptail --title "SARBS POLYBAR Version" --infobox "\`$1\` wird installiert ($n von $total). $1 $2" 9 70
     installpkg "$1"
 }
 
 # Klont ein Git-Repository und installiert es mit make.
-gitmakeinstall() {
-    progname="${1##*/}"
-    progname="${progname%.git}"
-    dir="$repodir/$progname"
-    whiptail --title "SARBS Installation" \
-        --infobox "\`$progname\` wird installiert ($n von $total) via \`git\` und \`make\`. $(basename "$1") $2" 8 80
+# TODO Testversion: Reihenfolge: Meson → CMake → ./configure → plain make
+# Kann die meisten Buildsysteme instalieren (TESTVERSION)
+gitbuildinstall() {
+  local repo="$1"
+  local note="$2"
+  local progname="${repo##*/}"; progname="${progname%.git}"
+  local dir="$repodir/$progname"
 
-    # Stelle sicher, dass das repodir dem User gehört
-    [ ! -d "$repodir" ] && sudo -u "$name" mkdir -p "$repodir"
+  whiptail --title "SARBS Build" \
+    --infobox "`$progname` wird installiert via git (Buildsystem auto) – $(basename "$repo") $note" 8 80
 
-    # Git-Operationen als User
-    if ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q $branch_option "$1" "$dir" && \
-       ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q $fallback_option "$1" "$dir" && \
-       ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch \
-        --no-tags -q "$1" "$dir"; then
-        # Clone fehlgeschlagen, versuche pull
-        cd "$dir" || return 1
-        sudo -u "$name" git pull --force
-    fi
+  [ ! -d "$repodir" ] && sudo -u "$name" mkdir -p "$repodir"
 
-    cd "$dir" || exit 1
-    # Make als User ausführen, nur install als root
-    sudo -u "$name" make >/dev/null 2>&1
-    make install >/dev/null 2>&1
-    # Aufräumen: Stelle sicher, dass alles dem User gehört
-    chown -R "$name:wheel" "$dir"
-    cd /tmp || return 1
+  # Clone/Pull als User
+  if ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch --no-tags -q $branch_option "$repo" "$dir" \
+  && ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch --no-tags -q $fallback_option "$repo" "$dir" \
+  && ! sudo -u "$name" git -C "$repodir" clone --depth 1 --single-branch --no-tags -q "$repo" "$dir"; then
+    cd "$dir" || return 1
+    sudo -u "$name" git pull --force -q || return 1
+  fi
+
+  cd "$dir" || return 1
+
+  # Präferierte Ziele
+  if [ -f meson.build ]; then
+    sudo -u "$name" meson setup --buildtype=release build || return 1
+    sudo -u "$name" meson compile -C build || return 1
+    meson install -C build || return 1
+
+  elif [ -f CMakeLists.txt ]; then
+    # Lean: Optionals OFF, damit kaum zusätzliche Deps gezogen werden
+    sudo -u "$name" mkdir -p build
+    cd build || return 1
+    sudo -u "$name" cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_DOC=OFF \
+      -DENABLE_ALSA=OFF \
+      -DENABLE_CURL=OFF \
+      -DENABLE_MPD=OFF \
+      -DENABLE_NETWORK=OFF \
+      -DENABLE_PULSEAUDIO=OFF \
+      -DENABLE_XKEYBOARD=OFF \
+      -DENABLE_I3=OFF \
+      -DENABLE_TRAY=OFF || return 1
+    sudo -u "$name" make -j"$(nproc)" || return 1
+    make install || return 1
+
+  elif [ -x ./configure ]; then
+    sudo -u "$name" ./configure --prefix=/usr || return 1
+    sudo -u "$name" make -j"$(nproc)" || return 1
+    make install || return 1
+
+  else
+    # Fallback: klassisch make (z. B. suckless)
+    sudo -u "$name" make -j"$(nproc)" || return 1
+    make install || return 1
+  fi
+
+  chown -R "$name:wheel" "$dir"
+  cd /tmp || true
 }
 
 # Installiert Pakete aus dem AUR mit dem AUR-Helper.
 aurinstall() {
-    whiptail --title "SARBS Installation" \
+    whiptail --title "SARBS POLYBAR Version" \
         --infobox "\`$1\` wird aus dem AUR installiert ($n von $total). $1 $2" 9 80
     echo "$aurinstalled" | grep -q "^$1$" && return 1
     sudo -u "$name" $aurhelper -S --noconfirm "$1" >/dev/null 2>&1
@@ -241,7 +272,7 @@ aurinstall() {
 
 # Installiert Python-Pakete mit pip.
 pipinstall() {
-    whiptail --title "SARBS Installation" \
+    whiptail --title "SARBS POLYBAR Version" \
         --infobox "Das Python-Paket \`$1\` wird installiert ($n von $total). $1 $2" 9 80
     [ -x "$(command -v "pip")" ] || installpkg python-pip >/dev/null 2>&1
     yes | pip install "$1"
@@ -416,14 +447,15 @@ refreshkeys ||
     error "Fehler beim automatischen Aktualisieren des Arch-Schlüsselrings. Versuche es manuell."
 
 # Installiert grundlegende Pakete, die für die Installation benötigt werden.
-for x in curl ca-certificates base-devel git ntp zsh; do
-    whiptail --title "SARBS Installation" \
-        --infobox "\`$x\` wird installiert, das zur Installation und Konfiguration anderer Programme benötigt wird." 8 70
-    installpkg "$x"
+for x in curl ca-certificates base-devel git ntp zsh \
+         cmake pkgconf jsoncpp cairo libuv libxcb xcb-util-wm xcb-util-image xcb-util-xrm; do
+  whiptail --title "SARBS POLYBAR Version" \
+    --infobox "\`$x\` wird installiert..." 8 70
+  installpkg "$x"
 done
 
 # Synchronisiert die Systemzeit.
-whiptail --title "SARBS Installation" \
+whiptail --title "SARBS POLYBAR Version" \
     --infobox "Systemzeit synchronisieren, um eine erfolgreiche und sichere Installation der Software zu gewährleisten..." 8 70
 ntpd -q -g >/dev/null 2>&1
 
@@ -455,7 +487,7 @@ sed -i "s/-j2/-j$(nproc)/;/^#MAKEFLAGS/s/^#//" /etc/makepkg.conf
 manualinstall $aurhelper || error "Fehler beim Installieren des AUR-Helfers."
 
 # AUR-Helper konfigurieren (Stellt sicher, dass Git-Pakete aus dem AUR automatisch aktualisiert werden)
-sudo -u "$name" $aurhelper -Y --save --devel
+$aurhelper -Y --save --devel
 
 # Startet die Installationsschleife für alle Programme.
 installationloop
@@ -559,18 +591,6 @@ echo "Defaults editor=/usr/bin/nvim" >/etc/sudoers.d/02-sarbs-visudo-editor
 
 # Entfernt temporäre sudoers-Datei.
 rm -f /etc/sudoers.d/sarbs-temp
-
-if systemd-detect-virt -q; then
-  cfg="/home/$name/.config/picom/picom.conf"
-  [ -f "$cfg" ] && sed -i \
-    -e 's/^backend.*/backend = "xrender";/' \
-    -e 's/^vsync.*/vsync = false;/' \
-    -e 's/^use-damage.*/use-damage = false;/' \
-    -e 's/^unredir-if-possible.*/unredir-if-possible = false;/' \
-    -e 's/^dithered-present.*/dithered-present = false;/' "$cfg"
-fi
-
-fc-cache -rv || exit 1
 
 # Zeigt die Abschlussmeldung an.
 finalize

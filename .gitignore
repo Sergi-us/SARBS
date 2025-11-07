@@ -1,5 +1,6 @@
 # Ignoriere alle .bac-Dateien
 *.bac
+AGENTS.md
 
 # Ignoriere das Verzeichnis "temp"
 temp/

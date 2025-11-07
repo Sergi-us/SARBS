@@ -430,6 +430,24 @@ ntpd -q -g >/dev/null 2>&1
 # Fügt den neuen Benutzer hinzu.
 adduserandpass || error "Fehler beim Hinzufügen des Benutzernamens und/oder Passworts."
 
+# Erstelle notwendige Nutzerverzeichnisse vor der Dotfiles-Installation
+whiptail --infobox "Nutzerverzeichnisse werden erstellt..." 7 50
+sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
+sudo -u "$name" mkdir -p "/home/$name/.config/abook/"
+sudo -u "$name" mkdir -p "/home/$name/.config/mpd/playlists/"
+sudo -u "$name" mkdir -p "/home/$name/.abook/"
+sudo -u "$name" mkdir -p "/home/$name/Bilder/screenshots/"
+sudo -u "$name" mkdir -p "/home/$name/Bilder/mpv/"
+sudo -u "$name" mkdir -p "/home/$name/Bücher/"
+sudo -u "$name" mkdir -p "/home/$name/Dokumente/"
+sudo -u "$name" mkdir -p "/home/$name/Downloads/"
+sudo -u "$name" mkdir -p "/home/$name/Filme/"
+sudo -u "$name" mkdir -p "/home/$name/Magazine/"
+sudo -u "$name" mkdir -p "/home/$name/Musik/"
+sudo -u "$name" mkdir -p "/home/$name/Podcast/aufnahmen/"
+sudo -u "$name" mkdir -p "/home/$name/Serien/"
+sudo -u "$name" mkdir -p "/home/$name/Videos/scr/"
+
 # Benutzer-Linger aktivieren (für Pipewire notwendig)
 loginctl enable-linger "$name"
 
@@ -498,9 +516,7 @@ echo "blacklist pcspkr" >/etc/modprobe.d/nobeep.conf
 
 # Setzt zsh als Standard-Shell für den neuen Benutzer.
 chsh -s /bin/zsh "$name" >/dev/null 2>&1
-sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
-sudo -u "$name" mkdir -p "/home/$name/.config/abook/"
-sudo -u "$name" mkdir -p "/home/$name/.config/mpd/playlists/"
+
 
 # Generiert die dbus UUID für Artix mit runit.
 dbus-uuidgen >/var/lib/dbus/machine-id
