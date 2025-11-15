@@ -14,7 +14,7 @@ Das Installation-Skript zieht zusätzliche Repositories:
 - [st](https://codeberg.org/Sergius/st.git) (terminal emulator)
 - [surf](https://github.com/Sergi-us/surf.git)
 
-Es werden Programme aus der [progs.csv](https://codeberg.org/Sergius/SARBS/raw/branch/main/progs.csv) installiert. Die Konfiguration ist in den [dotfiles](https://codeberg.org/Sergius/dotfiles.git) ...
+Es werden Programme aus der [progs.csv](https://codeberg.org/Sergius/SARBS/src/branch/main/progs.csv) installiert. Die Konfiguration ist in den [dotfiles](https://codeberg.org/Sergius/dotfiles.git) ...
 
 ## Suckless [Philosophie und Grundprinzipien](https://suckless.org/philosophy/)
 
