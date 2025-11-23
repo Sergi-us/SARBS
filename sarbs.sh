@@ -12,8 +12,8 @@
 # Sudoers Einstellungen ab Zeile 521 geändert.
 
 ### OPTIONEN UND VARIABLEN ###
-dotfilesrepo="https://github.com/Sergi-us/dotfiles.git"
-progsfile="https://raw.githubusercontent.com/Sergi-us/SARBS/main/progs.csv"
+dotfilesrepo="https://codeberg.org/Sergius/dotfiles.git"
+progsfile="https://codeberg.org/Sergius/SARBS/raw/branch/main/progs.csv"
 aurhelper="yay"
 branch_option=""                # Für DEV-Branch oder leer lassen
 fallback_option="-b main"       # Der Fallback-Branch
