@@ -10,6 +10,14 @@ Ein effizientes Shell-Skript, das ein voll funktionsfähiges, auf einem Auto-Til
 
 ## 🎯 Was ist SARBS?
 
+<p align="center">
+    <img
+      src="https://codeberg.org/Sergius/SARBS/raw/branch/main/SARBS-Screenshot-1.png"
+      alt="Vorschau von SARBS"
+      width="800"
+    >
+</p>
+
 SARBS installiert und konfiguriert automatisch:
 - ✅ **dwm** - Dynamic Window Manager mit nützlichen Patches
 - ✅ **st** - Simple Terminal mit Features
