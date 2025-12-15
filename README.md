@@ -207,10 +207,11 @@ Siehe [LICENSE](LICENSE) Datei.
 ---
 
 **📧 Kontakt**:
+- [YouTube Kanal](https://www.youtube.com/@5ergius)
 - [Codeberg Issues](https://codeberg.org/Sergius/SARBS/issues)
 - [GitHub Issues](https://github.com/Sergi-us/SARBS/issues) (Mirror)
 - [Homepage & Kontakt](https://sarbs.xyz/kontakt/)
 
----
+ ---
 
 **🌟 Gefällt dir SARBS?** - Star das Projekt auf [Codeberg](https://codeberg.org/Sergius/SARBS)!
