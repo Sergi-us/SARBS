@@ -120,6 +120,11 @@ cd SARBS
 # Anpassungen vornehmen...
 ```
 
+```bash
+3c06df43b03594a853e274f7009db77c5a7bca49abae20ff01785345a3bbd3df  sarbs.sh
+```
+
+
 ### SARBS wiederherstellen
 
 SARBS kann auch verwendet werden, um eine bestehende Installation wiederherzustellen:
