@@ -478,6 +478,17 @@ $aurhelper -Y --save --devel
 # Startet die Installationsschleife für alle Programme.
 installationloop
 
+# Bluetooth-Hardware prüfen und Systemdienst aktivieren (falls vorhanden)
+if [ -d /sys/class/bluetooth ] && [ -n "$(ls -A /sys/class/bluetooth 2>/dev/null)" ]; then
+    whiptail --infobox "Bluetooth-Hardware erkannt, Dienst wird aktiviert..." 7 60
+    systemctl enable bluetooth.service >/dev/null 2>&1
+    systemctl start bluetooth.service >/dev/null 2>&1
+    sleep 3
+else
+    whiptail --infobox "Keine Bluetooth-Hardware gefunden, überspringe..." 7 60
+    sleep 3
+fi
+
 # PipeWire-Dienste und Sockets für den Benutzer aktivieren
 sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
     systemctl --user enable --now pipewire.service pipewire.socket
