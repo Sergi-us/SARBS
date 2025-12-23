@@ -1,15 +1,11 @@
 #!/bin/sh
-## 2025-08-22 SARBS
-# Lazy.nvim ersetzt vim-plug
+## 2025-12-23 SARBS
 # dunst deaktiviert
-# TODO qutebrowser als librewolf alternative einbauen (wahrscheinlich über die progs.csv und dotfiles möglich)
 # TODO BlackArch Quellen hinzufügen
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
-# im Original von Luke Smith <luke@lukesmith.xyz> "ewige Props an dich bra"
+# im Original von Luke Smith <luke@lukesmith.xyz>
 # Lizenz: MIT
-
-# Sudoers Einstellungen ab Zeile 521 geändert.
 
 ### OPTIONEN UND VARIABLEN ###
 dotfilesrepo="https://codeberg.org/Sergius/dotfiles.git"
@@ -28,10 +24,7 @@ enable_firewall="true"          # Firewall-Setup aktivieren (true/false)
 # Diese Funktion füge bei den anderen Funktionen ein:
 setupfirewall() {
     whiptail --infobox "UFW Firewall wird eingerichtet..." 7 50
-
-
     # Backend auf nftables setzen (besser für Wireguard)
-    # Prüfe ob die Backend-Zeile existiert
     if grep -q "^#*IPT_BACKEND=" /etc/default/ufw; then
         # Zeile existiert (auskommentiert oder nicht), ersetze sie
         sed -i 's/^#*IPT_BACKEND=.*/IPT_BACKEND="nftables"/' /etc/default/ufw
@@ -66,7 +59,6 @@ setupfirewall() {
             rc-update add ufw default >/dev/null 2>&1
             ;;
     esac
-
     whiptail --infobox "Firewall wurde erfolgreich konfiguriert!" 7 50
     sleep 3
 }
@@ -136,22 +128,6 @@ adduserandpass() {
     chown -R "$name":wheel "$(dirname "$repodir")"
     echo "$name:$pass1" | chpasswd
     unset pass1 pass2
-##    # Neue Backup-Konfiguration
-##    # Gruppe erstellen, falls sie nicht existiert
-##    if ! getent group backup_users >/dev/null; then
-##        whiptail --infobox "Backup-Gruppe wird erstellt..." 7 50
-##        groupadd backup_users
-##    fi
-##    # USB-Mount-Verzeichnis erstellen und konfigurieren, falls es nicht existiert
-##    if [ ! -d "/mnt/usb" ]; then
-##        whiptail --infobox "USB-Mount-Verzeichnis wird eingerichtet..." 7 50
-##        mkdir -p "/mnt/usb"
-##        chown root:backup_users "/mnt/usb"
-##        chmod 2775 "/mnt/usb"
-##    fi
-##
-##    # Nutzer zur Backup-Gruppe hinzufügen
-##    usermod -aG backup_users "$name"
 }
 
 # Aktualisiert den Arch-Schlüsselring oder aktiviert Arch-Repositories auf Artix-Systemen.
@@ -303,81 +279,6 @@ lazyinstall() {
     sudo -u "$name" nvim --headless -c "lua require('lazy').sync()" -c "qa"
 }
 
-# Installiert vim-plug und die Plugins aus der Neovim-Konfiguration.
-##vimplugininstall() {
-##    whiptail --infobox "Neovim-Plugins werden installiert..." 7 80
-##    mkdir -p "/home/$name/.config/nvim/autoload"
-##    curl -Ls "https://raw.githubusercontent.com/Sergi-US/vim-plug/master/plug.vim" > "/home/$name/.config/nvim/autoload/plug.vim"
-##    chown -R "$name:wheel" "/home/$name/.config/nvim"
-##    sudo -u "$name" nvim -c "PlugInstall|q|q"
-##}
-
-# Erstellt die user.js für Firefox/Librewolf basierend auf Arkenfox ===
-##makeuserjs(){
-##    arkenfox="$pdir/arkenfox.js"
-##    overrides="$pdir/user-overrides.js"
-##    userjs="$pdir/user.js"
-##    ln -fs "/home/$name/.config/firefox/larbs.js" "$overrides"
-##    [ ! -f "$arkenfox" ] && curl -sL "https://raw.githubusercontent.com/Sergi-us/user.js/master/user.js" > "$arkenfox"
-##    cat "$arkenfox" "$overrides" > "$userjs"
-##    chown "$name:wheel" "$arkenfox" "$userjs"
-##    # Installieren des Aktualisierungsskripts.
-##    mkdir -p /usr/local/lib /etc/pacman.d/hooks
-##    cp "/home/$name/.local/bin/arkenfox-auto-update" /usr/local/lib/
-##    chown root:root /usr/local/lib/arkenfox-auto-update
-##    chmod 755 /usr/local/lib/arkenfox-auto-update
-##    # Konfiguration des pacman-Hooks zum automatischen Aktualisieren.
-##    echo "[Trigger]
-##Operation = Upgrade
-##Type = Package
-##Target = firefox
-##Target = librewolf
-##Target = librewolf-bin
-##[Action]
-##Description=Arkenfox user.js aktualisieren
-##When=PostTransaction
-##Depends=arkenfox-user.js
-##Exec=/usr/local/lib/arkenfox-auto-update" > /etc/pacman.d/hooks/arkenfox.hook
-##}
-
-# === Installiert Librewolf-Add-ons manuell durch Herunterladen der XPI-Dateien TESTVERSION ===
-##installffaddons(){
-##    # Liste der zu installierenden Add-ons
-##    addonlist="ublock-origin decentraleyes istilldontcareaboutcookies vimmatic darkreader keepassxc-browser styl-us nighttab"
-##    addontmp="$(mktemp -d)"
-##    trap "rm -fr $addontmp" HUP INT QUIT TERM PWR EXIT
-##    IFS=' '
-##    sudo -u "$name" mkdir -p "$pdir/extensions/"
-##
-##    # WICHTIG: In das temporäre Verzeichnis wechseln
-##    cd "$addontmp" || return 1
-##
-##    for addon in $addonlist; do
-##        if [ "$addon" = "ublock-origin" ]; then
-##            addonurl="$(curl -sL https://api.github.com/repos/gorhill/uBlock/releases/latest | grep -E 'browser_download_url.*\.firefox\.xpi' | cut -d '"' -f 4)"
-##        else
-##            addonurl="$(curl --silent "https://addons.mozilla.org/en-US/firefox/addon/${addon}/" | grep -o 'https://addons.mozilla.org/firefox/downloads/file/[^"]*')"
-##        fi
-##        file="${addonurl##*/}"
-##
-##        # KORREKTUR: Entweder -O ohne Umleitung ODER -o mit Dateiname
-##        sudo -u "$name" curl -LOs "$addonurl"
-##
-##        # Prüfen ob die Datei existiert
-##        if [ -f "$file" ]; then
-##            id="$(unzip -p "$file" manifest.json | grep "\"id\"" | head -1)"
-##            id="${id%\"*}"
-##            id="${id##*\"}"
-##            mv "$file" "$pdir/extensions/$id.xpi"
-##        else
-##            echo "Warnung: Download von $addon fehlgeschlagen"
-##        fi
-##    done
-##
-##    chown -R "$name:wheel" "$pdir/extensions"
-##    cd - >/dev/null
-##}
-
 # Zeigt eine Abschlussmeldung an, wenn die Installation beendet ist.
 finalize() {
     whiptail --title "Alles erledigt!" \
@@ -385,7 +286,6 @@ finalize() {
 }
 
 ### DAS EIGENTLICHE SKRIPT ###
-
 # 1. Logdatei mit Zeitstempel im Root-Home-Verzeichnis erstellen
 logfile="$HOME/install_$(date '+%Y-%m-%d_%H-%M-%S').log"
 touch "$logfile"
@@ -514,10 +414,6 @@ whiptail --infobox "Dunst-Service wird deaktiviert (läuft über xinitrc)..." 7 
 sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
     systemctl --user mask dunst.service >/dev/null 2>&1
 
-# Installiert Neovim-Plugins, falls sie noch nicht installiert sind.
-# wurde durch Lazy.nvim ersetzt
-# [ ! -f "/home/$name/.config/nvim/autoload/plug.vim" ] && vimplugininstall
-
 # Instaliert Lazy.nvim
 [ ! -d "/home/$name/.local/share/nvim/lazy" ] && lazyinstall
 
@@ -527,7 +423,6 @@ echo "blacklist pcspkr" >/etc/modprobe.d/nobeep.conf
 
 # Setzt zsh als Standard-Shell für den neuen Benutzer.
 chsh -s /bin/zsh "$name" >/dev/null 2>&1
-
 
 # Generiert die dbus UUID für Artix mit runit.
 dbus-uuidgen >/var/lib/dbus/machine-id
