@@ -179,6 +179,8 @@ A,cd-discid,"Ein Backend-Dienstprogramm zum Abrufen von CDDB-Discid-Informatione
 A,try,"Try lets you run a command and inspect its effects before changing your live system"
 ,fd,"Simple, fast and user-friendly alternative to find"
 ,lazygit,"Simple terminal UI for git commands"
+,wireless_tools,"Tools allowing to manipulate the Wireless Extensions"
+A,zenity,"Display graphical dialog boxes from shell scripts"
 A,steghide,"Embeds a message in a file by replacing some of the least significant bits"
 ,wireguard-tools,"next generation secure network tunnel"
 ,sshfs,"server ins eingene Dateisystem mounten"
@@ -186,3 +188,4 @@ A,steghide,"Embeds a message in a file by replacing some of the least significan
 ,dnsutils,"nützliche tools für fehlersuche (dig)"
 ,pcsc-tools,"PC/SC Architecture smartcard tools mit pcsc-deamon"
 ,pacman-contrib,"Contributed scripts and tools for pacman systems"
+,gum,"A tool for glamorous shell scripts"
