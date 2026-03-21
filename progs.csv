@@ -189,3 +189,4 @@ A,steghide,"Embeds a message in a file by replacing some of the least significan
 ,pcsc-tools,"PC/SC Architecture smartcard tools mit pcsc-deamon"
 ,pacman-contrib,"Contributed scripts and tools for pacman systems"
 ,gum,"A tool for glamorous shell scripts"
+,opencode,"The open source coding agent"
