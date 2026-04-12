@@ -414,6 +414,13 @@ case "$(readlink -f /sbin/init)" in
 esac
 
 # Klont die Dotfiles und entfernt unnötige Dateien.
+# ==========================================
+# TODO(Architektur): Init-System Abhängigkeiten
+# Da Systemd-User-Services (für PipeWire, Dunst, etc.) unter OpenRC 
+# nicht existieren, müssen diese Dienste über die Dotfiles gestartet werden.
+# Empfehlung: Baue eine Abfrage in die ~/.xinitrc deiner Dotfiles ein, z.B.:
+# if ! command -v systemctl >/dev/null 2>&1; then pipewire & wireplumber & fi
+# ==========================================
 putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
 [ -z "/home/$name/.config/newsboat/urls" ] &&
     echo "$rssurls" > "/home/$name/.config/newsboat/urls"
