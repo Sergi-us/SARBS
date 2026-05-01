@@ -332,6 +332,7 @@ adduserandpass || error "Fehler beim Hinzufügen des Benutzernamens und/oder Pas
 
 # Erstelle notwendige Nutzerverzeichnisse vor der Dotfiles-Installation
 whiptail --infobox "Nutzerverzeichnisse werden erstellt..." 7 50
+sudo -u "$name" mkdir -p "/home/$name/.local/state/zsh/"
 sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
 sudo -u "$name" mkdir -p "/home/$name/.config/abook/"
 sudo -u "$name" mkdir -p "/home/$name/.config/mpd/playlists/"
