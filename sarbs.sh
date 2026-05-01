@@ -407,7 +407,7 @@ sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
 putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
 [ -z "/home/$name/.config/newsboat/urls" ] &&
     echo "$rssurls" > "/home/$name/.config/newsboat/urls"
-rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml"
+rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml" "/home/$name/.gitconfig" "/home/$name/.gitignore" "/home/$name/README.md"
 
 # Dunst systemd-Service maskieren (wird über xinitrc gestartet)
 ## 2025-06-16 TODO Testen. dunst soll erst nach x11 starten.
