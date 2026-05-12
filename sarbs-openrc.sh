@@ -7,7 +7,7 @@
 
 ### OPTIONEN UND VARIABLEN ###
 dotfilesrepo="https://codeberg.org/Sergius/dotfiles.git"
-progsfile="https://codeberg.org/Sergius/SARBS/raw/branch/openrc/progs.csv"
+progsfile="https://codeberg.org/Sergius/SARBS/raw/branch/openrc/progs-openrc.csv"
 aurhelper="yay"
 branch_option="-b openrc"        # Für OpenRC-Branch
 fallback_option="-b main"        # Der Fallback-Branch
@@ -392,6 +392,18 @@ else
     sleep 3
 fi
 
+# Wichtige OpenRC-Dienste aktivieren
+case "$(readlink -f /sbin/init)" in
+    *openrc*|*)
+        whiptail --infobox "Aktiviere wichtige OpenRC-Dienste..." 7 60
+        rc-update add elogind boot >/dev/null 2>&1
+        rc-update add dbus default >/dev/null 2>&1
+        rc-update add iwd default >/dev/null 2>&1
+        rc-update add cronie default >/dev/null 2>&1
+        rc-update add acpid default >/dev/null 2>&1
+        ;;
+esac
+
 # PipeWire-Dienste und Sockets für den Benutzer aktivieren
 case "$(readlink -f /sbin/init)" in
     *systemd*)
@@ -485,13 +497,11 @@ cat >/etc/sudoers.d/01-sarbs-cmds-without-password <<'EOF'
 %wheel ALL=(ALL:ALL) NOPASSWD: \
     /usr/bin/shutdown, \
     /usr/bin/reboot, \
-    /usr/bin/systemctl suspend, \
-    /usr/bin/systemctl hibernate, \
-    /usr/bin/systemctl poweroff, \
     /usr/bin/loginctl suspend, \
     /usr/bin/loginctl hibernate, \
     /usr/bin/loginctl poweroff, \
-    /usr/bin/wifi-menu, \
+    /usr/bin/iwctl, \
+    /usr/bin/impala, \
     /usr/bin/mount, \
     /usr/bin/umount, \
     /usr/bin/pacman -Syu, \
