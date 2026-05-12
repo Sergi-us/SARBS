@@ -2,6 +2,8 @@
 ## 2025-12-23 SARBS
 # dunst deaktiviert
 # TODO BlackArch Quellen hinzufügen
+# TODO Git konfiguration hinzufügen (Omarcy style, optional während de rInstallation, .gitconfig automatisch anlegen)
+# TODO gnupg nutzerverzeichniss berechtigungen ändern auf 700
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz>
