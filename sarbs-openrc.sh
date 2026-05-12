@@ -1,5 +1,5 @@
 #!/bin/sh
-## 2025-12-23 SARBS - OpenRC Version
+## 2026-05-12 SARBS - OpenRC Version
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz>
@@ -477,6 +477,15 @@ echo "export \$(dbus-launch)" >/etc/profile.d/dbus.sh
     # Linke Maustaste durch Tippen aktivieren
     Option "Tapping" "on"
 EndSection' >/etc/X11/xorg.conf.d/40-libinput.conf
+
+# Setzt das Tastaturlayout systemweit für den X-Server auf Deutsch
+[ ! -f /etc/X11/xorg.conf.d/00-keyboard.conf ] && printf 'Section "InputClass"
+        Identifier "system-keyboard"
+        MatchIsKeyboard "on"
+        Option "XkbLayout" "de"
+        Option "XkbModel" "pc105"
+        Option "XkbVariant" "nodeadkeys"
+EndSection' >/etc/X11/xorg.conf.d/00-keyboard.conf
 
 # Kernel-Einstellung: Erlaubt normalen Benutzern dmesg zu lesen (für System-Debugging)
 mkdir -p /etc/sysctl.d
