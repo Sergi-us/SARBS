@@ -330,6 +330,7 @@ whiptail --infobox "Nutzerverzeichnisse werden erstellt..." 7 50
 sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
 sudo -u "$name" mkdir -p "/home/$name/.config/abook/"
 sudo -u "$name" mkdir -p "/home/$name/.config/mpd/playlists/"
+sudo -u "$name" mkdir -p "/home/$name/.local/state/zsh/"
 sudo -u "$name" mkdir -p "/home/$name/.abook/"
 sudo -u "$name" mkdir -p "/home/$name/Bilder/screenshots/"
 sudo -u "$name" mkdir -p "/home/$name/Bilder/mpv/"
@@ -428,7 +429,7 @@ esac
 # Klont die Dotfiles und entfernt unnötige Dateien.
 # ==========================================
 # TODO(Architektur): Init-System Abhängigkeiten
-# Da Systemd-User-Services (für PipeWire, Dunst, etc.) unter OpenRC 
+# Da Systemd-User-Services (für PipeWire, Dunst, etc.) unter OpenRC
 # nicht existieren, müssen diese Dienste über die Dotfiles gestartet werden.
 # Empfehlung: Baue eine Abfrage in die ~/.xinitrc deiner Dotfiles ein, z.B.:
 # if ! command -v systemctl >/dev/null 2>&1; then pipewire & wireplumber & fi
