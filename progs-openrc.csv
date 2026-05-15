@@ -202,3 +202,6 @@ A,steghide,"Embeds a message in a file by replacing some of the least significan
 ,pcsc-lite-openrc,"OpenRC init skripte für Smartcards (pcsc-tools)."
 ,ntp-openrc,"OpenRC init skripte für NTP."
 ,iwd-openrc,"OpenRC init skripte für iwd (WLAN)."
+,pipewire-openrc,"OpenRC init Skript für ipewire (Sound)"
+,pipewire-pulse-openrc,"OpenRC init Skript für Pulse (Suond)"
+,wireplumber-openrc,"OpenRC init Skript für Wireplumbler"

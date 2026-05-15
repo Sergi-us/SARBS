@@ -405,6 +405,10 @@ case "$(readlink -f /sbin/init)" in
         ;;
 esac
 
+# Audio-Gruppe für den Nutzer einrichten (wichtig für Pipewire auf OpenRC ohne Systemd-logind-ACLs)
+whiptail --infobox "Nutzer zur Audio- und Video-Gruppe hinzufügen..." 7 60
+usermod -a -G audio,video "$name" >/dev/null 2>&1
+
 # PipeWire-Dienste und Sockets für den Benutzer aktivieren
 case "$(readlink -f /sbin/init)" in
     *systemd*)
@@ -421,36 +425,40 @@ case "$(readlink -f /sbin/init)" in
             systemctl --user mask pulseaudio.service pulseaudio.socket
         ;;
     *openrc*|*)
-        # Unter OpenRC wird PipeWire typischerweise über ~/.xinitrc gestartet
-        whiptail --infobox "OpenRC erkannt: PipeWire wird über das Benutzerprofil geladen." 7 60
+        # Unter OpenRC werden die Pipewire-Daemons über den User-Space Supervisor gestartet
+        whiptail --infobox "OpenRC erkannt: Konfiguriere Pipewire-User-Services..." 7 60
+
+        # User-Dienste (Pipewire) aktivieren
+        # Wichtig: rc-update --user muss als der entsprechende User ausgeführt werden
+        sudo -u "$name" rc-update --user add pipewire default >/dev/null 2>&1
+        sudo -u "$name" rc-update --user add wireplumber default >/dev/null 2>&1
+        sudo -u "$name" rc-update --user add pipewire-pulse default >/dev/null 2>&1
+
+        # mpd als User-Dienst aktivieren (falls installiert)
+        if pacman -Qq mpd-openrc >/dev/null 2>&1; then
+            sudo -u "$name" rc-update --user add mpd default >/dev/null 2>&1
+        fi
         ;;
 esac
 
 # Klont die Dotfiles und entfernt unnötige Dateien.
 # ==========================================
-# TODO(Architektur): Init-System Abhängigkeiten
-# Da Systemd-User-Services (für PipeWire, Dunst, etc.) unter OpenRC
-# nicht existieren, müssen diese Dienste über die Dotfiles gestartet werden.
-# Empfehlung: Baue eine Abfrage in die ~/.xinitrc deiner Dotfiles ein, z.B.:
-# if ! command -v systemctl >/dev/null 2>&1; then pipewire & wireplumber & fi
-# ==========================================
 putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
-[ -z "/home/$name/.config/newsboat/urls" ] &&
-    echo "$rssurls" > "/home/$name/.config/newsboat/urls"
-rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml"
+rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml" "/home/$name/.gitconfig"
 
-# Dunst systemd-Service maskieren (wird über xinitrc gestartet)
-## 2025-06-16 TODO Testen. dunst soll erst nach x11 starten.
-whiptail --infobox "Dunst-Service wird deaktiviert (läuft über xinitrc)..." 7 60
-case "$(readlink -f /sbin/init)" in
-    *systemd*)
-        sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
-            systemctl --user mask dunst.service >/dev/null 2>&1
-        ;;
-    *openrc*|*)
-        # Unter OpenRC keine Systemd-User-Services vorhanden
-        ;;
-esac
+# # Dunst Systemd-Service maskieren (falls Systemd genutzt wird)
+# whiptail --infobox "Dunst-Service wird konfiguriert..." 7 60
+# case "$(readlink -f /sbin/init)" in
+#     *systemd*)
+#         sudo -u "$name" XDG_RUNTIME_DIR="/run/user/$(id -u "$name")" \
+#             systemctl --user mask dunst.service >/dev/null 2>&1
+#         ;;
+#     *openrc*|*)
+#         # Unter OpenRC benötigt Dunst keine spezielle Konfiguration,
+#         # da es über DBus Autostart oder die xinitrc gestartet wird.
+#         whiptail --infobox "OpenRC erkannt: Dunst-Service-Maskierung übersprungen." 7 60
+#         ;;
+# esac
 
 # Instaliert Lazy.nvim
 [ ! -d "/home/$name/.local/share/nvim/lazy" ] && lazyinstall
