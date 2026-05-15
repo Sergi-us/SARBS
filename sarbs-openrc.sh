@@ -1,5 +1,5 @@
 #!/bin/sh
-## 2026-05-12 SARBS - OpenRC Version
+## 2026-05-15 SARBS - OpenRC Version
 
 # Sergi's automatisches Einrichtungsskript (SARBS)
 # im Original von Luke Smith <luke@lukesmith.xyz>
@@ -247,6 +247,7 @@ putgitrepo() {
     dir=$(mktemp -d)
     [ ! -d "$2" ] && mkdir -p "$2"
     chown "$name":wheel "$dir" "$2"
+
     sudo -u "$name" git -C "$repodir" clone --depth 1 \
         --single-branch --no-tags -q --recursive $branch_option \
         --recurse-submodules "$1" "$dir" || \
@@ -443,7 +444,7 @@ esac
 
 # Klont die Dotfiles und entfernt unnötige Dateien.
 # ==========================================
-putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
+putgitrepo "$dotfilesrepo" "/home/$name"
 rm -rf "/home/$name/.git/" "/home/$name/README.md" "/home/$name/LICENSE" "/home/$name/FUNDING.yml" "/home/$name/.gitconfig"
 
 # # Dunst Systemd-Service maskieren (falls Systemd genutzt wird)
