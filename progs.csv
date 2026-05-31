@@ -182,6 +182,7 @@ A,try,"Try lets you run a command and inspect its effects before changing your l
 ,wireless_tools,"Tools allowing to manipulate the Wireless Extensions"
 A,zenity,"Display graphical dialog boxes from shell scripts"
 A,gpk-bin,"TUI dashboard that unifies 34 package managers into one searchable view"
+,kitty,"A modern, hackable, featureful, OpenGL-based terminal emulator"
 A,steghide,"Embeds a message in a file by replacing some of the least significant bits"
 ,wireguard-tools,"next generation secure network tunnel"
 ,sshfs,"server ins eingene Dateisystem mounten"
