@@ -25,42 +25,109 @@ enable_firewall="true"          # Firewall-Setup aktivieren (true/false)
 
 # Diese Funktion füge bei den anderen Funktionen ein:
 setupfirewall() {
-    whiptail --infobox "UFW Firewall wird eingerichtet..." 7 50
-    # Backend auf nftables setzen (besser für Wireguard)
-    if grep -q "^#*IPT_BACKEND=" /etc/default/ufw; then
-        # Zeile existiert (auskommentiert oder nicht), ersetze sie
-        sed -i 's/^#*IPT_BACKEND=.*/IPT_BACKEND="nftables"/' /etc/default/ufw
-    else
-        # Zeile existiert nicht, füge sie hinzu
-        echo 'IPT_BACKEND="nftables"' >> /etc/default/ufw
+    whiptail --infobox "nftables Firewall wird eingerichtet..." 7 50
+
+    if ! pacman -Qq nftables >/dev/null 2>&1; then
+        whiptail --title "Firewall nicht verfuegbar" --ok-button "Weiter" \
+            --msgbox "Das Paket 'nftables' konnte nicht gefunden werden.\\n\\nAuf diesem System wird keine Firewall eingerichtet.\\n\\nFalls du eine Firewall benoetigst, installiere 'nftables' manuell und konfiguriere sie nach der Installation." 12 70
+        return 0
     fi
 
-    # UFW zurücksetzen um sicherzustellen dass keine alten Regeln existieren
-    echo "y" | ufw --force reset >/dev/null 2>&1
+    cat > /etc/nftables.conf <<'NFTEOF'
+#!/usr/bin/nft -f
+# vim:set ts=2 sw=2 et:
 
-    # Standardregeln setzen
-    ufw default deny incoming >/dev/null 2>&1
-    ufw default allow outgoing >/dev/null 2>&1
+###############################################################################
+# SARBS Standard nftables Firewall Ruleset
+#
+# Philosophie: Minimalistisch, schnell und sicher.
+# Backend: Nativer Linux Netfilter Kernel Stack (kein Hintergrund-Daemon noetig)
+###############################################################################
 
-    # HINWEIS: UFW-Regeln werden in /etc/ufw/ gespeichert:
-    # - /etc/ufw/user.rules (IPv4 Regeln)
-    # - /etc/ufw/user6.rules (IPv6 Regeln)
-    # - /etc/ufw/before.rules & before6.rules (System-Regeln)
-    # Backup dieser Dateien vor dem Skript-Lauf wird empfohlen!
+# Setzt das gesamte Regelwerk beim Neu-Einlesen zurueck.
+# Verhindert doppelte/alte Regeln im Kernel nach einem Reload.
+flush ruleset
 
-    # UFW aktivieren (--force um die Bestätigungsfrage zu überspringen)
-    echo "y" | ufw --force enable >/dev/null 2>&1
+# Wir definieren eine globale Tabelle 'filter' fuer IPv4 und IPv6 ('inet').
+table inet filter {
 
-    # UFW-Dienst beim Systemstart aktivieren
+  # ===========================================================================
+  # INPUT CHAIN: Kontrolliert alle Pakete, die an DIESEN Rechner gerichtet sind.
+  # ===========================================================================
+  chain input {
+    # Hook im Kernel festlegen. Default Policy: DROP (Standardmaessig ALLES blockieren)
+    type filter hook input priority filter; policy drop;
+
+    # 1. UNGUELTIGE PAKETE:
+    # Verwirft beschaedigte oder gefaelschte Pakete sofort (Prozessor-Schonung).
+    ct state invalid drop comment "Eingehende ungueltige Pakete sofort verwerfen"
+
+    # 2. ANTWORTPAKETE / VERBINDUNGSVERFOLGUNG (Stateful Firewall):
+    # Erlaubt Antworten auf Verbindungen, die du SELBST von innen heraus gestartet hast.
+    ct state { established, related } accept comment "Antworten auf eigene ausgehende Verbindungen zulassen"
+
+    # 3. LOOPBACK (Localhost):
+    # Lokaler Datenverkehr zwischen Programmen auf dem Rechner muss uneingeschraenkt laufen.
+    iif lo accept comment "Kommunikation ueber Loopback-Schnittstelle (localhost) vollstaendig erlauben"
+
+    # 4. ICMP (Ping & Netzwerk-Diagnose):
+    # Erlaubt Ping-Anfragen (IPv4 & IPv6). Wichtig fuer Netzwerkdiagnosen und Pfaderkennung.
+    meta l4proto { icmp, icmpv6 } accept comment "ICMP/Ping fuer Netzwerkdiagnose zulassen"
+
+    # 5. OPTIONALE DIENSTE / PORTS FREIGEBEN:
+    # Standardmaessig auskommentiert! Dienste nach Bedarf aktivieren.
+    #
+    # tcp dport ssh accept comment "SSH-Zugriff von aussen erlauben (Port 22)"
+    # tcp dport { 80, 443 } accept comment "Webserver HTTP/HTTPS freigeben"
+    # tcp dport 22000 accept comment "Syncthing Datenuebertragung freigeben"
+
+    # 6. PORTSCAN-SCHUTZ & ABWEISUNG (Rate Limiting):
+    # Anfragen werden aktiv abgelehnt, gedrosselt auf max. 5-mal pro Sekunde.
+    pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
+
+    # Zaehler fuer alle verbleibenden verworfenen Pakete
+    counter
+  }
+
+  # ===========================================================================
+  # FORWARD CHAIN: Kontrolliert Pakete, die DURCH diesen Rechner geleitet werden.
+  # ===========================================================================
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+  # ===========================================================================
+  # OUTPUT CHAIN: Kontrolliert Datenverkehr, der VON DIESEM Rechner rausgeht.
+  # ===========================================================================
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+}
+NFTEOF
+
+    chmod 644 /etc/nftables.conf
+
     case "$(readlink -f /sbin/init)" in
         *systemd*)
-            systemctl enable ufw >/dev/null 2>&1
+            systemctl enable --now nftables.service >/dev/null 2>&1
+            ;;
+        *openrc*)
+            rc-update add nftables default >/dev/null 2>&1
+            rc-service nftables start >/dev/null 2>&1
+            ;;
+        *runit*)
+            [ -d /etc/sv/nftables ] && ln -sf /etc/sv/nftables /var/service/ >/dev/null 2>&1
+            nft -f /etc/nftables.conf >/dev/null 2>&1
+            ;;
+        *s6*)
+            [ -d /etc/s6/s6-service/nftables ] && ln -sf /etc/s6/s6-service/nftables /run/service/ >/dev/null 2>&1
+            nft -f /etc/nftables.conf >/dev/null 2>&1
             ;;
         *)
-            # Für Artix/OpenRC
-            rc-update add ufw default >/dev/null 2>&1
+            nft -f /etc/nftables.conf >/dev/null 2>&1
             ;;
-    esac
+    esac || error "nftables konnte nicht gestartet werden."
+
     whiptail --infobox "Firewall wurde erfolgreich konfiguriert!" 7 50
     sleep 3
 }
