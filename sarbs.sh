@@ -1,7 +1,6 @@
 #!/bin/sh
-## 2025-12-23 SARBS
+## 2026-08-16 SARBS
 # dunst deaktiviert
-# TODO BlackArch Quellen hinzufügen
 # TODO Git konfiguration hinzufügen (Omarcy style, optional während de rInstallation, .gitconfig automatisch anlegen)
 # TODO gnupg nutzerverzeichniss berechtigungen ändern auf 700
 
